@@ -1,29 +1,34 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View,TextInput, Dimensions, SafeAreaView } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
+import { StyleSheet, Text, View,TextInput, Button, Pressable, Dimensions, SafeAreaView, ScrollView, TouchableOpacity, Image  } from 'react-native';
 import ReactDOM from 'react-dom/client';
 import SelectDropdown from 'react-native-select-dropdown';
 import DatePicker from 'react-date-picker';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView, {Marker} from 'react-native-maps';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Location from 'expo-location';
-
+import { Camera, CameraType } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 
  export default function App() {
-  const [dateTime, setDateTime] = useState(new Date(Date.now()).toLocaleString());
+  /************************* Alert Type Dropdown ************************ */
+
   const alertTypes = [ 
     "Voirie",
     "Stationnement",
     "Animaux",
     "Travaux"
   ];
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 78.58,
-    longitude: -122.56,
-    latitudeDelta:0.0922,
-    longitudeDelta:0.0421,
-  });
+
+
+  /*************************** Date And Time ***************************** */
+  const [dateTime, setDateTime] = useState(new Date(Date.now()).toLocaleString());
+  
+
+  /***********************  Maps and marker *************************************/
+const [mapRegion, setMapRegion] = useState(false);
   
  const alertLocation = async ()=> {
   let {status} = await Location.requestForegroundPermissionsAsync();
@@ -46,10 +51,75 @@ import * as Location from 'expo-location';
 
 alertLocation();
 
-  return (
-    <SafeAreaView style={[styles.container]}>
-    <View style={styles.container}>
+/*************************************  Picture field *****************************/
 
+const [type, setType] = useState(CameraType.back);
+const [image, setImage] = useState(false);
+const cameraRef = useRef(null);
+const [hasCameraPermission, setHasCameraPermission] = useState(false);
+const [photo, setPhoto] = useState();
+const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState(false);
+
+
+
+/****************** Pick a picture from the media Library ********** */
+const pickImage = async () => {
+    
+    const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+
+    setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
+
+  let result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.All,
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 1,
+  });
+
+
+  if (!result.canceled) {
+    setImage(result.assets[0].uri);
+  }
+};
+
+const optionsPhoto = {
+  quality: 1,
+};
+
+/************************ Take a picture with the camera *************** */
+const openCamera =  async ()=> 
+{
+  const cameraPermission = await Camera.requestCameraPermissionsAsync();
+
+  if (cameraPermission.granted === false) 
+  {
+    alert("Accès à la caméra refuser");
+    return;
+  }
+  setHasCameraPermission(cameraPermission.status === "granted");
+
+  // show camera AND take picture 
+  const photo = await ImagePicker.launchCameraAsync(optionsPhoto, (res)=> {
+
+    if(!res.didCancel)
+    {
+      setState({photo: res.uri});
+    }
+
+  });
+
+  // show picture on screen 
+  setImage(photo.assets[0].uri);
+
+}
+/******************************* App return ************************************* */
+  return (
+    <SafeAreaView >
+      
+    <ScrollView>
+      <View style={styles.container}>
+    
+    
       <View style={styles.headerContainer}>
       <Text style={styles.pageTitle}>Alertez-nous</Text>
       </View>
@@ -63,13 +133,11 @@ alertLocation();
           }}
           data={alertTypes}
           buttonTextAfterSelection={(selectedItem, index) => {
-            // text represented after item is selected
-            // if data array is an array of objects then return selectedItem.property to render after item is selected
+
             return selectedItem
           }}
           rowTextForSelection={(item, index) => {
-            // text represented for each item in dropdown
-            // if data array is an array of objects then return item.property to represent item in dropdown
+
             return item
           }}
         />
@@ -81,23 +149,63 @@ alertLocation();
       </View>   
       
       </View>
-      <GestureHandlerRootView style={styles.container}>
+      {mapRegion ? 
+      (
         <View style={styles.mapContainer}>
-        <MapView style={styles.map} 
-        region={ mapRegion}
-        >
-          <Marker coordinate={mapRegion} title="alert location"/>
-        </MapView>
-  
-        {/* <Button title="obtenir ma position" onPress={alertLocation}/> */}
-        </View>
-        </GestureHandlerRootView>
-      <StatusBar style="auto" />
+          <MapView style={styles.map} 
+            region={ mapRegion}>
+            <Marker draggable coordinate={mapRegion} title="alert location"/>
+          </MapView>
+      </View>
+        ) 
+        : 
+        (
+          <View>
+            <Text>Chargement de la carte...</Text>
+          </View>
+        )}
+           <View style={styles.imageContainer}>
+            <Button title="Choisir une photo depuis le smartphone" style={styles.button} onPress={pickImage} />
+              {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} /> }
+              <Button title="Prendre une photo" onPress={openCamera}/> 
+              {hasMediaLibraryPermission ? <Button title="Sauvegarder cette photo" />: null}
+            </View>
+
+          <View style={styles.userInfos}>
+
+          <Text style={styles.label}>Nom* :</Text>
+          <TextInput   style={styles.textarea} required/>
+
+          <Text style={styles.label}>Prenom* :</Text>
+          <TextInput   style={styles.textarea} required/>
+
+          <Text style={styles.label}>Adresse* :</Text>
+          <TextInput   multiline style={styles.textarea} required/>
+
+          <Text style={styles.label}>Code Postal* :</Text>
+          <TextInput   style={styles.textarea} required/>
+
+          <Text style={styles.label}>Ville* :</Text>
+          <TextInput   style={styles.textarea} required/>
+
+          <Text style={styles.label}>Email* :</Text>
+          <TextInput   style={styles.textarea} required/>
+          
+          <Text style={styles.label}>Telephone* :</Text>
+          <TextInput   style={styles.textarea} required/>
+     
+          <Pressable style={styles.buttonContainer}>
+            <Text style={styles.textButton}>Envoyez l'alerte</Text>
+          </Pressable>
+          </View>  
     </View>
+    </ScrollView>
+    
+    <StatusBar style="auto" />
     </SafeAreaView>
   );
 }
-
+/********************************** Styles ********************************* */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -121,14 +229,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mapContainer:{
-    flex:2,
     justifyContent:'flex-start',
     alignContent:'center',
+    marginTop:"5%",
+    width: Dimensions.get("window").width,
+    height:150,
   },
   alertTypeContainer:{
+    flex:1,
+    justifyContent:'center',
+    alignContent:'center',
+    alignItems: 'center',
     width:"100%",
     paddingTop: 0,
-    borderWidth:2,
   },
   pageTitle:{
     fontWeight:"bold",
@@ -155,4 +268,22 @@ const styles = StyleSheet.create({
     width: Dimensions.get("window").width,
     height: "100%",
   },
+  camera:{
+    flex:1,
+    borderRadius:20,
+  },
+  buttonContainer:{
+    borderWidth:3, 
+    borderRadius:20, 
+    padding:5,
+    marginTop:20,
+    width:"100%",
+    height:50,
+    justifyContent:'center',
+    alignItems: 'center',
+  },
+  textButton:{
+    fontWeight:"bold",
+    fontSize:20,
+  }
 });
