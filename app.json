@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "entryPoint": "./app/index.js",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/homepage_simplonville_mobile.jpg",
@@ -44,7 +45,8 @@
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
-      ]
+      ],
+      "expo-router"
     ]
   }
 }
