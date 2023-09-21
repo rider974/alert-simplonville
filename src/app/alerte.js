@@ -113,12 +113,89 @@ const openCamera =  async ()=>
   setImage(photo.assets[0].uri);
 
 }
+/********************************* Forms Input Check ***************************** */
+const [alertType, setAlertType] = useState(false);
+const [descriptionAlert, setDescriptionAlert] = useState(false);
+const [photoAlert, setPhotoAlert] = useState(false);
+const [userName, setUserName] = useState(false);
+const [userFirstName, setUserFirstName] = useState(false);
+const [userAdress, setUserAdress] = useState(false);
+const [userCity, setUserCity] = useState(false);
+const [userEmail, setUserEmail] = useState(false);
+const [userZipCode, setUserZipCode] = useState(false);
 
-/********************************* Send Mail ************************************ */
+const [userPhone, setUserPhone] = useState(false);
+const [dateTimeAlert, setDateTimeAlert] = useState(false);
+const [adressAlert, setAdressAlert] = useState(false);
 
-const openEmail = ()=> {
-  Linking.openUrl("mailto:"+ "ok");
+const handleChangeAlertType = (text)=> {
+  setAlertType(text);
+};
+
+const handleChangeDescriptionAlert = (text)=> {
+  setDescriptionAlert(text);
+};
+
+const handleChangeUserName = (text)=> {
+  setUserName(text);
+};
+
+
+const handleChangeUserFirstName = (text)=> {
+  setUserFirstName(text);
+};
+
+
+const handleChangeUserAdress = (text)=> {
+  setUserAdress(text);
+};
+
+
+const handleChangeUserCity = (text)=> {
+  setUserCity(text);
+};
+
+
+const handleChangeUserEmail = (text)=> {
+  setUserEmail(text);
+};
+const handleChangeUserZipCode = (text)=> {
+  setUserZipCode(text);
+};
+
+const handleChangeUserPhone = (text)=> {
+  setUserPhone(text);
+};
+
+// const handleChangeAdressAlert = (text)=> {
+//   setAdressAlert(text);
+// };
+
+
+const showEmail = ()=> {
+  alert( image+  alertType +" "+descriptionAlert+" "+ userName+" "+ userFirstName+" "+ userAdress+ " "+ userCity+ " "+ userEmail+ " "+ userPhone+ " "+dateTime + userZipCode);
 }
+/********************************* Send Mail ************************************ */
+const [isMailAvailable, setIsMailAvailable] = useState(false);
+
+useEffect(()=> {
+  async function checkMailAvailability(){
+    const isAvailable = await MailComposer.isAvailableAsync();
+    setIsMailAvailable(isAvailable);
+  }
+  checkMailAvailability();
+}, []);
+
+const sendEmail = ()=> {
+  MailComposer.composeAsync(
+  {
+    subject: "Alerte " +alertType,
+    body: "Bonjour, \n \n Voici les informations concernant l'alerte: \n \n Type d'alerte: "+alertType + "\n Date: "+ dateTime.split(",")[0]+"\n Heure: "+dateTime.split(",")[1]+"\n Description de l'alerte: "+ descriptionAlert+"\n \n Informations sur le lanceur d'alerte: \n \n Prenom: "+ userFirstName+"\n Nom: "+ userName+"\n Numéro de téléphone: "+userPhone+"\n Email: "+ userEmail+"\n Adresse: "+userAdress+"\n Ville: "+userCity+"\n Code Postal: "+userZipCode+"\n \n Cordialement, \n \n "+userFirstName + " "+ userName,
+    recipients: [alertType.toLowerCase()+"@simplonville.com", "pascal.minat974@gmail.com"],
+    bccRecipients:["cdelobel.ext@simplon.co"],
+    attachments:[image],
+  });
+};
 /******************************* App return ************************************* */
   return (
     <SafeAreaView >
@@ -137,6 +214,7 @@ const openEmail = ()=> {
           <SelectDropdown
           style={[styles.selectDropdown, styles.alertTypeSelect]}
           onSelect={(selectedItem, index) => {
+             handleChangeAlertType(selectedItem);
           }}
           data={alertTypes}
           buttonTextAfterSelection={(selectedItem, index) => {
@@ -152,7 +230,7 @@ const openEmail = ()=> {
       <View style={styles.alertDescriptionContainer}>
 
       <Text style={styles.label}>Description de l'alerte* :</Text>
-      <TextInput  placeholder="Un accident est survenue sur l'autoroute SI32. Des embouteillages à prévoir..." multiline  style={styles.textarea} required/>
+      <TextInput  onChangeText={handleChangeDescriptionAlert} placeholder="Un accident est survenue sur l'autoroute SI32. Des embouteillages à prévoir..." multiline  style={styles.textarea} required/>
       </View>   
       
       </View>
@@ -181,28 +259,28 @@ const openEmail = ()=> {
           <View style={styles.userInfos}>
 
           <Text style={styles.label}>Nom* :</Text>
-          <TextInput   placeholder="ex: Doe" style={styles.textarea} required/>
+          <TextInput   onChangeText={handleChangeUserName} placeholder="ex: Doe" style={styles.textarea} required/>
 
           <Text style={styles.label}>Prenom* :</Text>
-          <TextInput  placeholder="ex: John" style={styles.textarea} required/>
+          <TextInput   onChangeText={handleChangeUserFirstName}placeholder="ex: John" style={styles.textarea} required/>
 
           <Text style={styles.label}>Adresse* :</Text>
-          <TextInput  placeholder="ex: 8, avenue react, XXXX, Simplonville" multiline style={styles.textarea} required/>
+          <TextInput   onChangeText={handleChangeUserAdress}placeholder="ex: 8, avenue react, XXXX, Simplonville" multiline style={styles.textarea} required/>
 
           <Text style={styles.label}>Code Postal* :</Text>
-          <TextInput   placeholder="ex: XXXXX" style={styles.textarea} required/>
+          <TextInput  onChangeText={handleChangeUserZipCode}  placeholder="ex: XXXXX" style={styles.textarea} required/>
 
           <Text style={styles.label}>Ville* :</Text>
-          <TextInput  placeholder="ex: Simplonville" style={styles.textarea} required/>
+          <TextInput   onChangeText={handleChangeUserCity}placeholder="ex: Simplonville" style={styles.textarea} required/>
 
           <Text style={styles.label}>Email* :</Text>
-          <TextInput  placeholder="ex: john.doe@user.com" style={styles.textarea} required/>
+          <TextInput  onChangeText={handleChangeUserEmail} placeholder="ex: john.doe@user.com" style={styles.textarea} required/>
           
           <Text style={styles.label}>Telephone* :</Text>
-          <TextInput  placeholder="ex: 06 XX XX XX XX" style={styles.textarea} required/>
+          <TextInput  onChangeText={handleChangeUserPhone} placeholder="ex: 06 XX XX XX XX" style={styles.textarea} required/>
      
           <Pressable style={styles.buttonContainer}>
-            <Text style={styles.textButton}  onPress={()=> openEmail()}>Envoyez l'alerte</Text>
+            <Text style={styles.textButton}  onPress={()=> sendEmail()}>Envoyez l'alerte</Text>
           </Pressable>
           <Text style={styles.mandatoryFields}>* Champ Obligatoire</Text>
           </View>  
@@ -314,5 +392,8 @@ const styles = StyleSheet.create({
   },
   userInfos:{
     padding:15,
+  },
+  mandatoryFields:{
+    fontWeight:"bold",
   }
 });
