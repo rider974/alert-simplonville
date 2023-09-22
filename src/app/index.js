@@ -43,7 +43,6 @@ const styles = StyleSheet.create({
         fontSize:20,
         padding:5,
         width:"100%",
-        heigth:"100%",
         justifyContent: 'center',
         alignItems: 'center',
         alignSelf:"center",

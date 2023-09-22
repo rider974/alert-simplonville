@@ -30,28 +30,45 @@ import { Link } from 'expo-router';
 
   /***********************  Maps and marker *************************************/
 const [mapRegion, setMapRegion] = useState(false);
-  
+const [adress, setAdress] = useState(false);
+
+const GEO_APIKEY = "55e3bb7990804df9a3e020753fdcfdb3";
+
+async function getReverseGeocode(latitude, longitude, apiKey)
+{
+  fetch("https://api.geoapify.com/v1/geocode/reverse?lat="+latitude+"&lon="+longitude+"&apiKey="+GEO_APIKEY)
+  .then(response => response.json())
+  .then(result => {
+   const formattedAdress = result.features[0].properties.formatted;
+
+    setAdress(formattedAdress);
+  })
+  .catch(error => console.log('error', error));
+}
+
  const alertLocation = async ()=> {
   let {status} = await Location.requestForegroundPermissionsAsync();
   if(status !== 'granted'){ 
     return ;
   }
+  
+
   let location = await Location.getCurrentPositionAsync({enableHighAccuracy:true});
+
   setMapRegion({   
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
     latitudeDelta:0.0922,
     longitudeDelta:0.0421,
   });
+
+    getReverseGeocode(location.coords.latitude, location.coords.longitude, GEO_APIKEY);
  }
 
  useEffect(()=> 
  {
     alertLocation();
  },[]);
-
-alertLocation();
-
 /*************************************  Picture field *****************************/
 
 const [type, setType] = useState(CameraType.back);
@@ -83,11 +100,13 @@ const pickImage = async () => {
   }
 };
 
+/************************ Take a picture with the camera *************** */
+
 const optionsPhoto = {
   quality: 1,
 };
 
-/************************ Take a picture with the camera *************** */
+
 const openCamera =  async ()=> 
 {
   const cameraPermission = await Camera.requestCameraPermissionsAsync();
@@ -167,14 +186,6 @@ const handleChangeUserPhone = (text)=> {
   setUserPhone(text);
 };
 
-// const handleChangeAdressAlert = (text)=> {
-//   setAdressAlert(text);
-// };
-
-
-const showEmail = ()=> {
-  alert( image+  alertType +" "+descriptionAlert+" "+ userName+" "+ userFirstName+" "+ userAdress+ " "+ userCity+ " "+ userEmail+ " "+ userPhone+ " "+dateTime + userZipCode);
-}
 /********************************* Send Mail ************************************ */
 const [isMailAvailable, setIsMailAvailable] = useState(false);
 
@@ -190,8 +201,8 @@ const sendEmail = ()=> {
   MailComposer.composeAsync(
   {
     subject: "Alerte " +alertType,
-    body: "Bonjour, \n \n Voici les informations concernant l'alerte: \n \n Type d'alerte: "+alertType + "\n Date: "+ dateTime.split(",")[0]+"\n Heure: "+dateTime.split(",")[1]+"\n Description de l'alerte: "+ descriptionAlert+"\n \n Informations sur le lanceur d'alerte: \n \n Prenom: "+ userFirstName+"\n Nom: "+ userName+"\n Numéro de téléphone: "+userPhone+"\n Email: "+ userEmail+"\n Adresse: "+userAdress+"\n Ville: "+userCity+"\n Code Postal: "+userZipCode+"\n \n Cordialement, \n \n "+userFirstName + " "+ userName,
-    recipients: [alertType.toLowerCase()+"@simplonville.com", "pascal.minat974@gmail.com"],
+    body: "Bonjour, \n \n Voici les informations concernant l'alerte: \n \n Type d'alerte: "+alertType + "\n Date: "+ dateTime.split(",")[0]+"\n Heure: "+dateTime.split(",")[1]+"\n Description de l'alerte: "+ descriptionAlert+"\n Adresse de l'alerte: "+ adress+ "\n \n Informations sur le lanceur d'alerte: \n \n Prenom: "+ userFirstName+"\n Nom: "+ userName+"\n Numéro de téléphone: "+userPhone+"\n Email: "+ userEmail+"\n Adresse: "+userAdress+"\n Ville: "+userCity+"\n Code Postal: "+userZipCode+"\n \n Cordialement, \n \n "+userFirstName + " "+ userName,
+    recipients: [alertType +"@simplonville.com"],
     bccRecipients:["cdelobel.ext@simplon.co"],
     attachments:[image],
   });
@@ -230,16 +241,22 @@ const sendEmail = ()=> {
       <View style={styles.alertDescriptionContainer}>
 
       <Text style={styles.label}>Description de l'alerte* :</Text>
-      <TextInput  onChangeText={handleChangeDescriptionAlert} placeholder="Un accident est survenue sur l'autoroute SI32. Des embouteillages à prévoir..." multiline  style={styles.textarea} required/>
+      <TextInput  numberOfLines={2} onChangeText={handleChangeDescriptionAlert} placeholder="Un accident est survenue sur l'autoroute SI32. Des embouteillages à prévoir..." multiline  style={styles.textarea} required/>
       </View>   
-      
+
       </View>
       {mapRegion ? 
       (
         <View style={styles.mapContainer}>
           <MapView style={styles.map} 
             region={ mapRegion}>
-            <Marker draggable coordinate={mapRegion} title="alert location"/>
+            <Marker draggable={true} coordinate={mapRegion} title={adress ? adress : "Point d'alerte"} onDragEnd={(e)=> {
+              setMapRegion({
+                latitude: e.nativeEvent.coordinate.latitude,
+                longitude: e.nativeEvent.coordinate.longitude,
+              });
+              getReverseGeocode(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude, GEO_APIKEY);
+            }}/>
           </MapView>
       </View>
         ) 
@@ -251,7 +268,7 @@ const sendEmail = ()=> {
         )}
            <View style={styles.imageContainer}>
             <Pressable  style={styles.button} onPress={pickImage} ><Text>Choisir une photo depuis le smartphone</Text></Pressable>
-              {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} /> }
+              {image && <Image source={{ uri: image }} style={{ width: 200, height: 200, alignSelf:'center'}} /> }
               <Pressable  style={styles.button}  onPress={openCamera}><Text>Prendre une photo</Text></Pressable>
               {hasMediaLibraryPermission ? <Button title="Sauvegarder cette photo" />: null}
             </View>
@@ -265,19 +282,19 @@ const sendEmail = ()=> {
           <TextInput   onChangeText={handleChangeUserFirstName}placeholder="ex: John" style={styles.textarea} required/>
 
           <Text style={styles.label}>Adresse* :</Text>
-          <TextInput   onChangeText={handleChangeUserAdress}placeholder="ex: 8, avenue react, XXXX, Simplonville" multiline style={styles.textarea} required/>
+          <TextInput    numberOfLines={2} onChangeText={handleChangeUserAdress}placeholder="ex: 8, avenue react, XXXX, Simplonville" multiline style={styles.textarea} required/>
 
           <Text style={styles.label}>Code Postal* :</Text>
-          <TextInput  onChangeText={handleChangeUserZipCode}  placeholder="ex: XXXXX" style={styles.textarea} required/>
+          <TextInput  regex={/^\d{0,5}$/}keyboardType="numeric" onChangeText={handleChangeUserZipCode}  placeholder="ex: XXXXX" style={styles.textarea} required/>
 
           <Text style={styles.label}>Ville* :</Text>
-          <TextInput   onChangeText={handleChangeUserCity}placeholder="ex: Simplonville" style={styles.textarea} required/>
+          <TextInput   regex={/^[A-Za-z\s-]$/} onChangeText={handleChangeUserCity}placeholder="ex: Simplonville" style={styles.textarea} required/>
 
           <Text style={styles.label}>Email* :</Text>
-          <TextInput  onChangeText={handleChangeUserEmail} placeholder="ex: john.doe@user.com" style={styles.textarea} required/>
+          <TextInput  regex={/^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$/} onChangeText={handleChangeUserEmail} placeholder="ex: john.doe@user.com" style={styles.textarea} required/>
           
           <Text style={styles.label}>Telephone* :</Text>
-          <TextInput  onChangeText={handleChangeUserPhone} placeholder="ex: 06 XX XX XX XX" style={styles.textarea} required/>
+          <TextInput keyboardType="numeric"  placeholder="ex: 06 XX XX XX XX" style={styles.textarea} required/>
      
           <Pressable style={styles.buttonContainer}>
             <Text style={styles.textButton}  onPress={()=> sendEmail()}>Envoyez l'alerte</Text>
